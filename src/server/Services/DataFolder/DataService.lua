@@ -88,6 +88,11 @@ local function push(player, path, value)
 end
 
 function DataService:Init(network)
+	if self._initialized then
+		return
+	end
+
+	self._initialized = true
 	NetworkService = network
 
 	local function load(player)
@@ -116,18 +121,37 @@ function DataService:Init(network)
 		if profile then profile:Release() end
 	end)
 
-	MessagingService:SubscribeAsync("DataStoreProTrusted", function(msg) -- name it well master
-		local data = msg.Data
-		local player = Players:GetPlayerByUserId(data.userId)
-		if not player then return end
-
-		local profile = getProfile(player)
-		if not profile then return end
-
-		for k,v in pairs(data.data) do
-			profile:Set(k, v)
-		end
+	NetworkService.OnRequest("ClaimDaily", function(player)
+		self:ClaimDaily(player)
 	end)
+
+	game:BindToClose(function()
+		Store:SaveAll()
+	end)
+
+	local subscribed, err = pcall(function()
+		MessagingService:SubscribeAsync("DataStoreProTrusted", function(msg)
+			local data = msg.Data
+			if type(data) ~= "table" then return end
+
+			local player = Players:GetPlayerByUserId(data.userId)
+			if not player then return end
+
+			local profile = getProfile(player)
+			if not profile then return end
+
+			if type(data.data) ~= "table" then return end
+
+			for k,v in pairs(data.data) do
+				profile:Set(k, v)
+				push(player, k, v)
+			end
+		end)
+	end)
+
+	if not subscribed then
+		warn("[DataService] MessagingService subscription failed:", err)
+	end
 end
 
 function DataService:Set(player, key, value)

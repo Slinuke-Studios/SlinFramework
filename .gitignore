@@ -1,0 +1,7 @@
+.vscode/
+.luau-aliases
+sourcemap.json
+/Packages/
+/DevPackages/
+*.rbxl
+*.rbxlx

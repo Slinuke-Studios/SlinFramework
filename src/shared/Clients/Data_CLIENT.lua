@@ -38,6 +38,31 @@ local function getNested(tbl, path)
 	return current
 end
 
+local function setNested(tbl, path, value)
+	local current = tbl
+	local parts = {}
+
+	for key in string.gmatch(path, "[^%.]+") do
+		table.insert(parts, key)
+	end
+
+	for index = 1, #parts - 1 do
+		local key = parts[index]
+
+		if type(current[key]) ~= "table" then
+			current[key] = {}
+		end
+
+		current = current[key]
+	end
+
+	local finalKey = parts[#parts]
+	local oldValue = current[finalKey]
+	current[finalKey] = deepCopy(value)
+
+	return oldValue
+end
+
 local function newSignal()
 	local signal = {}
 	signal._connections = {}
@@ -115,16 +140,22 @@ function ClientDataService:Init()
 			return
 		end
 
-		for key, value in pairs(delta) do
-			local oldValue = Data[key]
-
-			Data[key] = deepCopy(value)
+		if type(delta.path) == "string" then
+			local oldValue = setNested(Data, delta.path, delta.value)
 
 			self.Changed:Fire(
-				key,
-				deepCopy(value),
+				delta.path,
+				deepCopy(delta.value),
 				deepCopy(oldValue)
 			)
+
+			return
+		end
+
+		for key, value in pairs(delta) do
+			local oldValue = Data[key]
+			Data[key] = deepCopy(value)
+			self.Changed:Fire(key, deepCopy(value), deepCopy(oldValue))
 		end
 	end)
 
