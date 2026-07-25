@@ -32,7 +32,9 @@ local DAILY_REWARDS = {
 	[7] = { Cash = 500, Gems = 25 },
 }
 
-local Store = SlinProfileStore.New("SlinFramework_V2", DEFAULT_DATA)
+local Store = SlinProfileStore.New("SlinFramework_V3_v1_3", DEFAULT_DATA, {
+	Debug = true,
+})
 
 local PlayerDataService = SlinServer.CreateService({
 	Name = "PlayerDataService",
@@ -51,6 +53,8 @@ local function getReplica(player)
 end
 
 function PlayerDataService:SlinStart()
+	Store:StartAutosave(60)
+
 	local function loadPlayer(player)
 		local profile = Store:LoadAsync(player)
 
@@ -109,6 +113,25 @@ function PlayerDataService:Add(player, path, amount)
 	self:Set(player, path, nextValue)
 
 	return nextValue, current
+end
+
+function PlayerDataService:Save(player)
+	local profile = getProfile(player)
+
+	if not profile then
+		return false, "ProfileNotLoaded"
+	end
+
+	return profile:Save()
+end
+
+function PlayerDataService.Client:DebugAddCash(player, amount)
+	amount = tonumber(amount) or 100
+
+	local newCash = PlayerDataService:Add(player, "Cash", amount)
+	local saved = PlayerDataService:Save(player)
+
+	return saved, newCash
 end
 
 function PlayerDataService:ClaimDaily(player)

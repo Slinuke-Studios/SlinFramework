@@ -6,28 +6,50 @@ local TableUtil = require(ReplicatedStorage.Slin.TableUtil)
 local SlinProfileStore = {}
 SlinProfileStore.__index = SlinProfileStore
 
-function SlinProfileStore.New(storeName, template)
+function SlinProfileStore.New(storeName, template, options)
 	local self = setmetatable({}, SlinProfileStore)
+	options = options or {}
 
+	self.Name = storeName
 	self._store = DataStoreService:GetDataStore(storeName)
 	self._template = template
 	self._profiles = {}
+	self._debug = options.Debug == true
 
 	return self
+end
+
+function SlinProfileStore:SetDebug(enabled)
+	self._debug = enabled == true
+end
+
+function SlinProfileStore:_log(...)
+	if self._debug then
+		print("[SlinProfileStore:" .. self.Name .. "]", ...)
+	end
 end
 
 function SlinProfileStore:LoadAsync(player)
 	local key = "Player_" .. player.UserId
 	local data
+	local isNew = false
 
-	local loaded = pcall(function()
+	local loaded, loadError = pcall(function()
 		data = self._store:GetAsync(key)
 	end)
 
 	if not loaded or type(data) ~= "table" then
+		if not loaded then
+			warn("[SlinProfileStore:" .. self.Name .. "] Load failed for " .. key .. ":", loadError)
+		else
+			self:_log("No saved data for", key, "using template")
+		end
+
 		data = TableUtil.DeepCopy(self._template)
+		isNew = true
 	else
 		TableUtil.Reconcile(data, self._template)
+		self:_log("Loaded", key)
 	end
 
 	local owner = self
@@ -36,7 +58,7 @@ function SlinProfileStore:LoadAsync(player)
 		Key = key,
 		Player = player,
 		Data = data,
-		IsDirty = false,
+		IsDirty = isNew == true and true or false,
 		IsReleased = false,
 	}
 
@@ -65,12 +87,15 @@ function SlinProfileStore:LoadAsync(player)
 			return true
 		end
 
-		local saved = pcall(function()
+		local saved, saveError = pcall(function()
 			owner._store:SetAsync(self.Key, self.Data)
 		end)
 
 		if saved then
 			self.IsDirty = false
+			owner:_log("Saved", self.Key)
+		else
+			warn("[SlinProfileStore:" .. owner.Name .. "] Save failed for " .. self.Key .. ":", saveError)
 		end
 
 		return saved
@@ -107,6 +132,23 @@ function SlinProfileStore:SaveAll()
 	for _, profile in pairs(self._profiles) do
 		profile:Save()
 	end
+end
+
+function SlinProfileStore:StartAutosave(interval)
+	interval = interval or 60
+
+	if self._autosaveStarted then
+		return
+	end
+
+	self._autosaveStarted = true
+
+	task.spawn(function()
+		while self._autosaveStarted do
+			task.wait(interval)
+			self:SaveAll()
+		end
+	end)
 end
 
 return SlinProfileStore
