@@ -31,6 +31,7 @@ local RE_Ready = getOrCreate("RemoteEvent", "ClientReady")
 local NetworkService = {}
 
 local Ready = {}
+local PendingFullData = {}
 local Handlers = {}
 
 local function rateLimit()
@@ -59,17 +60,18 @@ RE_Ready.OnServerEvent:Connect(function(player)
 	print(player.Name, "sent ClientReady")
 
 	Ready[player] = true
+
+	if PendingFullData[player] then
+		RE_Full:FireClient(player, PendingFullData[player])
+		PendingFullData[player] = nil
+	end
 end)
 
 function NetworkService.SendFullData(player, data)
 	if Ready[player] then
 		RE_Full:FireClient(player, data)
 	else
-		task.delay(1, function()
-			if player.Parent then
-				RE_Full:FireClient(player, data)
-			end
-		end)
+		PendingFullData[player] = data
 	end
 end
 
@@ -80,10 +82,14 @@ function NetworkService.SendDelta(player, delta)
 end
 
 function NetworkService.OnRequest(action, fn)
+	assert(type(action) == "string", "NetworkService.OnRequest expects a string action")
+	assert(type(fn) == "function", "NetworkService.OnRequest expects a function handler")
+
 	Handlers[action] = fn
 end
 
 RE_Request.OnServerEvent:Connect(function(player, action, payload)
+	if type(action) ~= "string" then return end
 	if not checkRate(player) then return end
 
 	local fn = Handlers[action]
@@ -91,6 +97,11 @@ RE_Request.OnServerEvent:Connect(function(player, action, payload)
 		local ok, err = pcall(fn, player, payload)
 		if not ok then warn(err) end
 	end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	Ready[player] = nil
+	PendingFullData[player] = nil
 end)
 
 return NetworkService

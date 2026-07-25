@@ -1,0 +1,29 @@
+{
+  "name": "SlinFramework",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Clients": {
+        "$path": "src/shared/Clients"
+      },
+      "Packages": {
+        "$path": "src/shared/Packages"
+      },
+      "Shared": {
+        "$path": "src/shared/Shared"
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$path": "src/server"
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "$path": "src/client/StarterPlayerScripts"
+      }
+    }
+  }
+}
