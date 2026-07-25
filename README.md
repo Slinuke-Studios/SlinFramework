@@ -1,15 +1,17 @@
 # SlinFramework
 
-A Roblox data and networking framework built around:
+SlinFramework is a custom Roblox framework inspired by the ideas behind Knit, ReplicaService, and ProfileStore, without depending on those packages.
 
-- server-side profile loading through `DataService`
-- client data replication through `Data_CLIENT`
-- remote setup through `NetworkService`
-- shared custom signals through `Packages/Signal`
+It gives you:
+
+- `SlinServer.CreateService()` for server services
+- `SlinClient.CreateController()` for client controllers
+- `SlinProfileStore` for template-based player data loading and saving
+- `SlinReplicaService` for server-owned data replication to clients
+- `SlinReplicaController` for client-side replicated state subscriptions
+- `SlinNet` for framework-owned remotes
 
 ## Rojo Setup
-
-Run this from the framework folder:
 
 ```powershell
 rojo serve default.project.json
@@ -17,46 +19,102 @@ rojo serve default.project.json
 
 Then connect from Roblox Studio with the Rojo plugin.
 
-## Runtime Flow
+## Folder Layout
 
-1. `BootStrap.server.lua` starts `DataService` once.
-2. `DataService` loads player profiles and sends full data through `NetworkService`.
-3. `DataBootStrap.client.lua` starts `Data_CLIENT`.
-4. The client fires `ClientReady`.
-5. `NetworkService` sends pending full data, then future deltas.
-
-## Client Usage
-
-```lua
-local Data = require(game.ReplicatedStorage.Clients.Data_CLIENT)
-
-Data.Loaded:Connect(function()
-	print(Data:Get("Cash"))
-end)
-
-Data:Subscribe("Cash", function(newCash, oldCash)
-	print("Cash changed", oldCash, newCash)
-end)
-
-Data:Request("ClaimDaily")
+```text
+src/
+  shared/
+    Slin/                 Shared framework modules
+  server/
+    Slin/                 Server-only framework modules
+    Services/             Slin services
+    BootStrap.server.lua  Starts server services
+  client/
+    Slin/                 Client-only framework modules
+    Controllers/          Slin controllers
+    StarterPlayerScripts/
+      DataBootStrap.client.lua
 ```
 
-## Server Usage
+## Service Example
 
 ```lua
-local DataService = require(game.ServerScriptService.Services.DataFolder.DataService)
+local ServerScriptService = game:GetService("ServerScriptService")
 
-DataService.ProfileLoaded.Event:Connect(function(player)
-	DataService:Add(player, "Cash", 100)
+local SlinServer = require(ServerScriptService.Slin.SlinServer)
+
+local CoinsService = SlinServer.CreateService({
+	Name = "CoinsService",
+	Priority = 10,
+	Client = {},
+})
+
+function CoinsService:SlinStart()
+	print("CoinsService started")
+end
+
+function CoinsService:AddCoins(player, amount)
+	print(player.Name, amount)
+end
+
+function CoinsService.Client:GetCoins(player)
+	return 100
+end
+
+return CoinsService
+```
+
+## Controller Example
+
+```lua
+local SlinClient = require(script.Parent.Parent.Slin.SlinClient)
+
+local CoinsController = SlinClient.CreateController({
+	Name = "CoinsController",
+	Priority = 10,
+})
+
+function CoinsController:SlinStart()
+	local coinsService = SlinClient.GetService("CoinsService")
+	print(coinsService:GetCoins())
+end
+
+return CoinsController
+```
+
+## Player Data
+
+`PlayerDataService` shows the intended full pattern:
+
+1. Load data with `SlinProfileStore`.
+2. Create a `"PlayerData"` replica for the joining player.
+3. Mutate data only on the server.
+4. Replicate changes to the client through `SlinReplicaService`.
+5. Read and subscribe on the client with `PlayerDataController`.
+
+Client usage:
+
+```lua
+local PlayerDataController = SlinClient.GetController("PlayerDataController")
+
+PlayerDataController.Loaded:Connect(function(data)
+	print("Loaded cash:", data.Cash)
+end)
+
+PlayerDataController:Subscribe("Cash", function(newCash, oldCash)
+	print("Cash changed:", oldCash, newCash)
 end)
 ```
 
-## What Was Improved
+## Important Notes
 
-- Fixed `Signal:Connect`, added disconnect, once, wait, and destroy support.
-- Fixed server bootstrap so `DataService:Init()` runs once instead of once per player.
-- Fixed profile saving so it writes through the store owner instead of the profile table.
-- Added default reconciliation so old saves receive new fields.
-- Added safer client-ready handling so full data waits until the client is ready.
-- Fixed delta sync shape between server and client.
-- Added Rojo project config and framework documentation.
+This is a custom starter version, not a drop-in replacement for mature production libraries yet. The biggest future upgrades are:
+
+- session locking for profiles
+- autosave intervals
+- retry/backoff around DataStore writes
+- server-to-client event signals for services
+- middleware for validating client requests
+- better typed Luau annotations
+
+Those are the exact next steps that would make SlinFramework feel more production-ready while still staying custom.
