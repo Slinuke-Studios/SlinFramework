@@ -1,9 +1,6 @@
-local ClientDataService = require(game.ReplicatedStorage.Clients.Data_CLIENT)
+local clientRoot = script.Parent
 
-ClientDataService:Init()
+local SlinClient = require(clientRoot.Slin.SlinClient)
 
-if not ClientDataService:WaitUntilLoaded(30) then
-	error("Failed to load player data")
-end
-
-print("Client data loaded") 
+SlinClient.LoadControllers(clientRoot.Controllers)
+SlinClient.Start()

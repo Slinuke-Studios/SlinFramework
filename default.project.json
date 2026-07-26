@@ -12,6 +12,9 @@
       },
       "Shared": {
         "$path": "src/shared/Shared"
+      },
+      "Slin": {
+        "$path": "src/shared/Slin"
       }
     },
     "ServerScriptService": {
@@ -22,7 +25,15 @@
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
-        "$path": "src/client/StarterPlayerScripts"
+        "DataBootStrap": {
+          "$path": "src/client/StarterPlayerScripts/DataBootStrap.client.lua"
+        },
+        "Controllers": {
+          "$path": "src/client/Controllers"
+        },
+        "Slin": {
+          "$path": "src/client/Slin"
+        }
       }
     }
   }

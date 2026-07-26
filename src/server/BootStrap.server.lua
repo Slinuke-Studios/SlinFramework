@@ -1,4 +1,6 @@
-local DataService = require(game:GetService("ServerScriptService"):WaitForChild("Services"):WaitForChild("DataFolder"):WaitForChild("DataService"))
-local NetworkService = require(game:GetService("ServerScriptService"):WaitForChild("Services"):WaitForChild("DataFolder"):WaitForChild("NetworkService"))
+local ServerScriptService = game:GetService("ServerScriptService")
 
-DataService:Init(NetworkService)
+local SlinServer = require(ServerScriptService.Slin.SlinServer)
+
+SlinServer.LoadServices(ServerScriptService.Services)
+SlinServer.Start()
