@@ -11,6 +11,7 @@ It gives you:
 - `SlinReplicaController` for client-side replicated state subscriptions
 - `SlinNet` for framework-owned remotes
 
+- `Leaderboard` with chat tags to go with it. 
 ## Rojo Setup
 
 ```powershell
