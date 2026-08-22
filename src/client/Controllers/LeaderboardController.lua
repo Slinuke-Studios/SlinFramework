@@ -284,7 +284,7 @@ function LeaderboardController:EnableChatTags(options)
 
 		local properties = Instance.new("TextChatMessageProperties")
 		local color = rankColors[rank] or "#FFFFFF"
-		properties.PrefixText = string.format('<font color="%s">[TOP %d]</font> %s', color, rank, message.PrefixText)
+		properties.PrefixText = string.format('<font color="%s">[#%d CASH]</font> %s', color, rank, message.PrefixText)
 		
 
 		return properties
