@@ -29,11 +29,6 @@ local LeaderboardService = SlinServer.CreateService({
 			StoreName = "SlinLeaderboard_Level",
 			DisplayName = "Level",
 		},
-		DuckDamage = {
-			DataPath = "duck_damage",
-			StoreName = "SlinLeaderboard_DuckDamage",
-			DisplayName = "Duck Damage",
-		},
 	},
 	_nameCache = {},
 })
@@ -45,9 +40,6 @@ local BOARD_ALIASES = {
 	gem = "Gems",
 	most_gems = "Gems",
 	level = "Level",
-	duckdamage = "DuckDamage",
-	duck_damage = "DuckDamage",
-	most_duck_damage = "DuckDamage",
 }
 
 local function clampLimit(limit)
