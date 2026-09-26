@@ -2,7 +2,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ServerScriptService = game:GetService("ServerScriptService")
 
-local SlinServer = require(ServerScriptService.Slin.SlinServer)
+local SlinServer = require(ServerScriptService.Server.Slin.SlinServer)
 
 local DEFAULT_BOARD = "Cash"
 local DEFAULT_LIMIT = 10

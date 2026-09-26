@@ -1,13 +1,14 @@
 local Players = game:GetService("Players")
 
 local playerScripts = Players.LocalPlayer:WaitForChild("PlayerScripts")
-local SlinClient = require(playerScripts:WaitForChild("Slin"):WaitForChild("SlinClient"))
+local SlinClient = require(playerScripts.Client:WaitForChild("Slin"):WaitForChild("SlinClient"))
 local LeaderboardController = SlinClient.WaitForController("LeaderboardController")
 
 local boardModel = workspace:WaitForChild("map"):WaitForChild("Leaderboards")
 
 local CashSurfaceGui = boardModel.Most_Cash:WaitForChild("Face"):WaitForChild("SurfaceGui")
 local GemSurfaceGui = boardModel.Most_Gems:WaitForChild("Face"):WaitForChild("SurfaceGui")
+local DuckDamageSurfaceGui = boardModel.Most_Duck_Damage:WaitForChild("Face"):WaitForChild("SurfaceGui")
 
 local rowStyle = {
 	Limit = 10,
@@ -35,6 +36,18 @@ LeaderboardController:BindList(CashSurfaceGui, {
 
 LeaderboardController:BindList(GemSurfaceGui, {
 	Board = "Gems",
+	Limit = rowStyle.Limit,
+	RefreshSeconds = rowStyle.RefreshSeconds,
+	RowSize = rowStyle.RowSize,
+	TextSize = rowStyle.TextSize,
+	TextColor3 = rowStyle.TextColor3,
+	TextStrokeTransparency = rowStyle.TextStrokeTransparency,
+	Padding = rowStyle.Padding,
+	TextPadding = rowStyle.TextPadding,
+})
+
+LeaderboardController:BindList(DuckDamageSurfaceGui, {
+	Board = "duck_damage",
 	Limit = rowStyle.Limit,
 	RefreshSeconds = rowStyle.RefreshSeconds,
 	RowSize = rowStyle.RowSize,

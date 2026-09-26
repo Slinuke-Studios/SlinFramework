@@ -3,38 +3,23 @@
   "tree": {
     "$className": "DataModel",
     "ReplicatedStorage": {
-      "$className": "ReplicatedStorage",
-      "Clients": {
-        "$path": "src/shared/Clients"
-      },
-      "Packages": {
-        "$path": "src/shared/Packages"
-      },
       "Shared": {
-        "$path": "src/shared/Shared"
-      },
-      "Slin": {
-        "$path": "src/shared/Slin"
+        "$path": "src/shared"
       }
     },
+
     "ServerScriptService": {
-      "$className": "ServerScriptService",
-      "$path": "src/server"
+      "Server": {
+        "$path": "src/server"
+      }
     },
+
     "StarterPlayer": {
-      "$className": "StarterPlayer",
       "StarterPlayerScripts": {
-        "$className": "StarterPlayerScripts",
-        "DataBootStrap": {
-          "$path": "src/client/StarterPlayerScripts/DataBootStrap.client.lua"
-        },
-        "Controllers": {
-          "$path": "src/client/Controllers"
-        },
-        "Slin": {
-          "$path": "src/client/Slin"
+        "Client": {
+          "$path": "src/client"
         }
       }
-    }
+    },
   }
 }

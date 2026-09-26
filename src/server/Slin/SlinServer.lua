@@ -1,6 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local SlinNet = require(ReplicatedStorage.Slin.SlinNet)
+local SlinNet = require(ReplicatedStorage.Shared.Slin.SlinNet)
 
 local SlinServer = {
 	Services = {},
@@ -38,6 +38,8 @@ function SlinServer.LoadServices(folder)
 	for _, child in ipairs(folder:GetChildren()) do
 		if child:IsA("ModuleScript") then
 			require(child)
+		elseif child:IsA("Folder") then
+			SlinServer.LoadServices(child)
 		end
 	end
 end
@@ -64,15 +66,12 @@ function SlinServer.Start()
 			if type(methodName) ~= "string" then
 				return nil
 			end
-
 			local method = service.Client[methodName]
-
 			if type(method) ~= "function" then
 				warn(("[SlinServer] Missing client method %s.%s"):format(service.Name, methodName))
 				return nil
 			end
-
-			return method(service.Client, player, ...)
+			return method(player, ...)
 		end
 	end
 

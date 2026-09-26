@@ -1,75 +1,17 @@
-local Signals = require(game.ReplicatedStorage.Shared.Signals)
-
-local Players = game:GetService("Players")
-local MessagingService = game:GetService("MessagingService")
-
-local ProfileStore = require(script.Parent.ProfileStore)
+local ServerScriptService = game:GetService("ServerScriptService")
+local PlayerDataService = require(ServerScriptService.Server.Services.PlayerDataService)
 
 local DataService = {}
 DataService.__index = DataService
 
-local NetworkService = nil
-
-local DEFAULT_PROFILE = {
-	Cash = 0,
-	Gems = 0,
-	XP = 0,
-	Level = 1,
-
-	stats = {
-		playtime = 0,
-	},
-
-	dailyReward = {
-		lastClaim = 0,
-		streak = 0,
-	},
-
-	cooldowns = {},
-	transactionLog = {},
-
-	banned = {
-		isBanned = false,
-		reason = "",
-		expiresAt = 0,
-	},
-
-	_metadata = {
-		version = 1,
-	},
+local KEY_ALIAS = {
+	dailyReward = "DailyReward",
+	stats = "Stats",
+	cooldowns = "Cooldowns",
 }
 
-local LEVEL_CONFIG = {
-	BaseXP = 100,
-	Scale = 1.5,
-	Max = 1000,
-}
-
-local DAILY = {
-	[1] = {Cash = 100},
-	[2] = {Cash = 150},
-	[3] = {Cash = 200, Gems = 5},
-	[4] = {Cash = 250},
-	[5] = {Cash = 300, Gems = 10},
-	[6] = {Cash = 400},
-	[7] = {Cash = 500, Gems = 25},
-}
-
-local function copy(t)
-	if type(t) ~= "table" then return t end
-	local c = {}
-	for k,v in pairs(t) do c[k]=copy(v) end
-	return c
-end
-
-local function xpRequired(level)
-	return math.floor(LEVEL_CONFIG.BaseXP * (LEVEL_CONFIG.Scale ^ (level - 1)))
-end
-
-local Store = ProfileStore.New("SlinWork_V1", DEFAULT_PROFILE)
-
-local function getProfile(player)
-	return Store:GetActiveProfile(player)
+local function alias(key)
+	return KEY_ALIAS[key] or key
 end
 
 DataService.ProfileLoaded = Instance.new("BindableEvent")
@@ -78,180 +20,88 @@ DataService.LeveledUp = Instance.new("BindableEvent")
 DataService.DailyReward = Instance.new("BindableEvent")
 DataService.Banned = Instance.new("BindableEvent")
 
-local function push(player, path, value)
-	if NetworkService then
-		NetworkService.SendDelta(player, {
-			path = path,
-			value = value
-		})
-	end
-end
+PlayerDataService.ProfileLoaded:Connect(function(player)
+	DataService.ProfileLoaded:Fire(player)
+end)
+
+PlayerDataService.Changed:Connect(function(player, path, newValue, oldValue)
+	DataService.StatChanged:Fire(player, path, newValue, oldValue)
+end)
+
+PlayerDataService.LeveledUp:Connect(function(player, level)
+	DataService.LeveledUp:Fire(player, level)
+end)
+
+PlayerDataService.DailyRewardClaimed:Connect(function(player, reward, streak)
+	DataService.DailyReward:Fire(player, reward, streak)
+end)
+
+PlayerDataService.Banned:Connect(function(player, reason, expiresAt)
+	DataService.Banned:Fire(player, reason, expiresAt)
+end)
 
 function DataService:Init(network)
 	if self._initialized then
+		warn("DataService already initialized")
 		return
 	end
-
 	self._initialized = true
-	NetworkService = network
 
-	local function load(player)
-		Store:LoadProfile(player, function(profile)
-			if not profile then return end
+	if not network then return end
 
-			self.ProfileLoaded:Fire(player)
-
-			print("Loaded profile for", player.Name)
-
-			NetworkService.SendFullData(player, profile:GetData())
-		end)
-	end
-
-	for _, p in ipairs(Players:GetPlayers()) do
-		task.spawn(load, p)
-	end
-
-	Players.PlayerAdded:Connect(load)
-	
-	Signals.OnPlayerAdded:Connect(function(player)
-	end)
-
-	Players.PlayerRemoving:Connect(function(player)
-		local profile = getProfile(player)
-		if profile then profile:Release() end
-	end)
-
-	NetworkService.OnRequest("ClaimDaily", function(player)
+	network.OnRequest("ClaimDaily", function(player)
 		self:ClaimDaily(player)
 	end)
 
-	game:BindToClose(function()
-		Store:SaveAll()
+	network.OnRequest("SpinWheel", function(player)
+		local result = self:SpinWheel(player)
+		network.SendSpinResult(player, result)
 	end)
 
-	local subscribed, err = pcall(function()
-		MessagingService:SubscribeAsync("DataStoreProTrusted", function(msg)
-			local data = msg.Data
-			if type(data) ~= "table" then return end
-
-			local player = Players:GetPlayerByUserId(data.userId)
-			if not player then return end
-
-			local profile = getProfile(player)
-			if not profile then return end
-
-			if type(data.data) ~= "table" then return end
-
-			for k,v in pairs(data.data) do
-				profile:Set(k, v)
-				push(player, k, v)
-			end
-		end)
+	network.OnRequest("GetSpinStatus", function(player)
+		local status = self:GetSpinStatus(player)
+		network.SendSpinStatus(player, status)
 	end)
+end
 
-	if not subscribed then
-		warn("[DataService] MessagingService subscription failed:", err)
-	end
+function DataService:Get(player, key)
+	return PlayerDataService:Get(player, alias(key))
 end
 
 function DataService:Set(player, key, value)
-	local p = getProfile(player)
-	if not p then return end
-
-	local old = p:Get(key)
-	p:Set(key, value)
-
-	self.StatChanged:Fire(player, key, value, old)
-	push(player, key, value)
+	return PlayerDataService:Set(player, alias(key), value)
 end
 
 function DataService:Add(player, key, amount)
-	local p = getProfile(player)
-	if not p then return end
-
-	local old = p:Get(key) or 0
-	local new = old + amount
-
-	p:Set(key, new)
-
-	self.StatChanged:Fire(player, key, new, old)
-	push(player, key, new)
+	return PlayerDataService:Add(player, alias(key), amount)
 end
 
 function DataService:AddXP(player, amount)
-	local p = getProfile(player)
-	if not p then return end
-
-	local level = p:Get("Level")
-	local xp = p:Get("XP")
-
-	xp += amount
-
-	while xp >= xpRequired(level) do
-		xp -= xpRequired(level)
-		level += 1
-
-		self.LeveledUp:Fire(player, level)
-	end
-
-	p:Set("XP", xp)
-	p:Set("Level", level)
-
-	push(player, "XP", xp)
-	push(player, "Level", level)
+	return PlayerDataService:AddXP(player, amount)
 end
 
 function DataService:ClaimDaily(player)
-	local p = getProfile(player)
-	if not p then return end
-
-	local d = p:Get("dailyReward")
-	local now = os.time()
-
-	if now - d.lastClaim < 86400 then return end
-
-	d.streak = math.min(d.streak + 1, 7)
-	d.lastClaim = now
-
-	local reward = DAILY[d.streak]
-
-	p:Set("dailyReward", d)
-
-	if reward.Cash then self:Add(player, "Cash", reward.Cash) end
-	if reward.Gems then self:Add(player, "Gems", reward.Gems) end
-
-	self.DailyReward:Fire(player, reward, d.streak)
+	return PlayerDataService:ClaimDaily(player)
 end
 
 function DataService:SetCooldown(player, name, duration)
-	local p = getProfile(player)
-	if not p then return end
-
-	local c = p:Get("cooldowns")
-	c[name] = os.time() + duration
-
-	p:Set("cooldowns", c)
+	return PlayerDataService:SetCooldown(player, name, duration)
 end
 
 function DataService:IsCooldown(player, name)
-	local p = getProfile(player)
-	if not p then return false end
-
-	local c = p:Get("cooldowns")
-	return c[name] and os.time() < c[name]
+	return PlayerDataService:IsCooldown(player, name)
 end
 
 function DataService:Ban(player, reason)
-	local p = getProfile(player)
-	if not p then return end
+	return PlayerDataService:BanPlayer(player, reason)
+end
 
-	p:Set("banned", {
-		isBanned = true,
-		reason = reason,
-		expiresAt = 0
-	})
+function DataService:SpinWheel(player)
+	return PlayerDataService:SpinWheel(player)
+end
 
-	player:Kick("Banned: " .. reason)
+function DataService:GetSpinStatus(player)
+	return PlayerDataService:GetSpinStatus(player)
 end
 
 return DataService

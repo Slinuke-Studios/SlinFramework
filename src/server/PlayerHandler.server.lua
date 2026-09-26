@@ -1,1 +1,0 @@
--- Player lifecycle is handled by Slin services now.

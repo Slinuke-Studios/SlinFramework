@@ -1,8 +1,8 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local SlinNet = require(ReplicatedStorage.Slin.SlinNet)
-local TableUtil = require(ReplicatedStorage.Slin.TableUtil)
+local SlinNet = require(ReplicatedStorage.Shared.Slin.SlinNet)
+local TableUtil = require(ReplicatedStorage.Shared.Slin.TableUtil)
 
 local RE_ReplicaCreate = SlinNet.Event("ReplicaCreate")
 local RE_ReplicaPatch = SlinNet.Event("ReplicaPatch")

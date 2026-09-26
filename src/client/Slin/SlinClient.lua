@@ -1,11 +1,11 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local SlinNet = require(ReplicatedStorage.Slin.SlinNet)
+local SlinNet = require(ReplicatedStorage.Shared.Slin.SlinNet)
 
 local SlinClient = {
 	Controllers = {},
 	_started = false,
+	_startedControllers = {}
 }
 
 local function sortModules(modules)
@@ -33,6 +33,20 @@ function SlinClient.GetController(name)
 	return SlinClient.Controllers[name]
 end
 
+function SlinClient.WaitForController(name, timeout)
+	local startedAt = os.clock()
+	timeout = timeout or 10
+	
+	while not SlinClient.Controllers[name] do
+		if os.clock() - startedAt > timeout then
+			error(("Controller %s was not registered after %d seconds"):format(name, timeout), 2)
+		end
+		task.wait()
+	end
+	
+	return SlinClient.Controllers[name]
+end
+
 function SlinClient.GetService(name)
 	local remoteFunction = SlinNet.Function("Service_" .. name)
 
@@ -49,6 +63,8 @@ function SlinClient.LoadControllers(folder)
 	for _, child in ipairs(folder:GetChildren()) do
 		if child:IsA("ModuleScript") then
 			require(child)
+		elseif child:IsA("Folder") then
+			SlinClient.LoadControllers(child)
 		end
 	end
 end
@@ -59,6 +75,8 @@ function SlinClient.Start()
 	end
 
 	SlinClient._started = true
+
+	SlinNet.Event("ClientReady"):FireServer()
 
 	local controllers = {}
 
@@ -72,6 +90,7 @@ function SlinClient.Start()
 		if type(controller.SlinInit) == "function" then
 			controller:SlinInit()
 		end
+		SlinClient._startedControllers[controller.Name] = true
 	end
 
 	for _, controller in ipairs(controllers) do

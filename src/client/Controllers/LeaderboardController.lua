@@ -2,7 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
 
 local SlinClient = require(script.Parent.Parent.Slin.SlinClient)
-local Signal = require(ReplicatedStorage.Slin.Signal)
+local Signal = require(ReplicatedStorage.Shared.Slin.Signal)
 
 local LeaderboardController = SlinClient.CreateController({
 	Name = "LeaderboardController",
@@ -92,9 +92,17 @@ local function createRow(container, rank, text, options)
 	return row
 end
 
+local function formatName(name)
+	if #name > 8 then
+		return string.sub(name, 1, 5) .. "..."
+	end
+
+	return name
+end
+
 local function formatEntry(entry)
 	local crown = if entry.Rank == 1 then utf8.char(0x1F451) else ""
-	return string.format("%d%s: %s - %s", entry.Rank, crown, entry.Name, tostring(entry.Score))
+	return string.format("%d%s: %s - %s", entry.Rank, crown, formatName(entry.Name), tostring(entry.Score))
 end
 
 
@@ -275,7 +283,7 @@ function LeaderboardController:EnableChatTags(options)
 		if not rank then
 			return nil
 		end
-		
+
 		local rankColors = {
 			[1] = "#FFD700",
 			[2] = "#C0C0C0",
@@ -285,7 +293,7 @@ function LeaderboardController:EnableChatTags(options)
 		local properties = Instance.new("TextChatMessageProperties")
 		local color = rankColors[rank] or "#FFFFFF"
 		properties.PrefixText = string.format('<font color="%s">[#%d CASH]</font> %s', color, rank, message.PrefixText)
-		
+
 
 		return properties
 	end

@@ -1,38 +1,23 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
-local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+local SlinNet = require(ReplicatedStorage.Shared.Slin.SlinNet)
 
-if not Remotes then
-	Remotes = Instance.new("Folder")
-	Remotes.Name = "Remotes"
-	Remotes.Parent = ReplicatedStorage
-end
-
-local function getOrCreate(className, name)
-	local obj = Remotes:FindFirstChild(name)
-
-	if obj then
-		return obj
-	end
-
-	obj = Instance.new(className)
-	obj.Name = name
-	obj.Parent = Remotes
-
-	return obj
-end
-
-local RE_Full = getOrCreate("RemoteEvent", "FullData")
-local RE_Delta = getOrCreate("RemoteEvent", "DeltaSync")
-local RE_Request = getOrCreate("RemoteEvent", "ClientRequest")
-local RE_Ready = getOrCreate("RemoteEvent", "ClientReady")
+local RE_Full = SlinNet.Event("FullData")
+local RE_Delta = SlinNet.Event("DeltaSync")
+local RE_Request = SlinNet.Event("ClientRequest")
+local RE_Ready = SlinNet.Event("ClientReady")
+local RE_SpinResult = SlinNet.Event("SpinResult")
+local RE_SpinStatus = SlinNet.Event("SpinStatus")
 
 local NetworkService = {}
 
 local Ready = {}
 local PendingFullData = {}
 local Handlers = {}
+
+-- (rateLimit, checkRate, RE_Ready.OnServerEvent:Connect(...), SendFullData, SendDelta,
+--  OnRequest, RE_Request.OnServerEvent:Connect(...), PlayerRemoving — all stay exactly the same)
 
 local function rateLimit()
 	local bucket = {}
@@ -57,8 +42,6 @@ end
 local checkRate = rateLimit()
 
 RE_Ready.OnServerEvent:Connect(function(player)
-	print(player.Name, "sent ClientReady")
-
 	Ready[player] = true
 
 	if PendingFullData[player] then
@@ -76,6 +59,7 @@ function NetworkService.SendFullData(player, data)
 end
 
 function NetworkService.SendDelta(player, delta)
+	print("SendDelta called, Ready?", Ready[player])
 	if Ready[player] then
 		RE_Delta:FireClient(player, delta)
 	end
@@ -86,6 +70,14 @@ function NetworkService.OnRequest(action, fn)
 	assert(type(fn) == "function", "NetworkService.OnRequest expects a function handler")
 
 	Handlers[action] = fn
+end
+
+function NetworkService.SendSpinResult(player, result)
+	RE_SpinResult:FireClient(player, result)
+end
+
+function NetworkService.SendSpinStatus(player, status)
+	RE_SpinStatus:FireClient(player, status)
 end
 
 RE_Request.OnServerEvent:Connect(function(player, action, payload)

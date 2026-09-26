@@ -1,4 +1,4 @@
-local SlinClient = require(game.Players.LocalPlayer.PlayerScripts.Slin.SlinClient)
+local SlinClient = require(script.Parent.Slin.SlinClient)
 local LeaderboardController = SlinClient.WaitForController("LeaderboardController")
 
 local label = script.Parent -- YOUR TEXT LABEL
